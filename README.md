@@ -1,5 +1,17 @@
 # Simulador de hardware SOLI (HC-12)
 
+## Pagina web (el simulador)
+
+`index.html` es el aparato de una mesa con sus 6 botones. Cada boton arma la
+misma trama que mandaria el HC-12, el puente la lee y hace el POST al back.
+Todo eso se ve en la terminal de la pagina.
+
+Se sube a Vercel tal cual (Import del repo, framework "Other", sin build).
+Para probar en la compu: `npx serve .` y abrir la direccion que muestra
+(abrir el `index.html` con doble click no anda, porque usa modulos).
+
+## Programas de terminal (para el hardware real)
+
 ```
 [aparato de la mesa]  --radio HC-12-->  [HC-12 receptor por USB]  -->  puente.js  --HTTP-->  back
    6 botones                               en la compu del local                 POST /solicitudes

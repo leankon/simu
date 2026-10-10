@@ -16,7 +16,8 @@ export const TIPOS = ['mozo', 'cuenta', 'pan', 'menu', 'cancelar']
 
 export function checksum(texto) {
   let x = 0
-  for (const c of Buffer.from(texto, 'ascii')) x ^= c
+  // sin Buffer, asi lo usa tanto la pagina como node
+  for (let i = 0; i < texto.length; i++) x ^= texto.charCodeAt(i)
   return x.toString(16).toUpperCase().padStart(2, '0')
 }
 
