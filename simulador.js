@@ -2,15 +2,19 @@
 const API_POR_DEFECTO = 'https://soli-olive.vercel.app'
 
 // los 6 botones del aparato. "tipo" es lo que se guarda en la base y tiene que
-// coincidir con TEXTO_MOTIVO del front (Llamados.tsx), si no se ve el texto crudo
+// coincidir con TEXTO_MOTIVO del front (Llamados.tsx), si no se ve el texto crudo.
+// prioridad no manda nada: deja armado el proximo boton para que vaya con prioridad
 const BOTONES = [
   { tipo: 'mozo', texto: 'Mozo' },
   { tipo: 'cuenta', texto: 'Cuenta' },
   { tipo: 'pan', texto: 'Pan' },
   { tipo: 'menu', texto: 'Menu' },
-  { tipo: 'agua', texto: 'Agua' },
   { tipo: 'cancelar', texto: 'Cancelar' },
+  { tipo: 'prioridad', texto: 'Prioridad' },
 ]
+
+// cuanto tiempo queda armada la prioridad despues de apretarla
+const VENTANA_PRIORIDAD_MS = 5000
 
 // el aparato real no deberia mandar 10 llamados si el cliente aprieta muchas
 // veces seguidas. mientras dura esto, el boton no hace nada
@@ -24,6 +28,45 @@ const contenedorBotones = document.getElementById('botones')
 const registro = document.getElementById('registro')
 
 let ocupado = false
+
+// hasta cuando vale la prioridad. 0 es "no esta armada"
+let prioridadHasta = 0
+let relojPrioridad = null
+
+function prioridadArmada() {
+  return Date.now() < prioridadHasta
+}
+
+function desarmarPrioridad() {
+  prioridadHasta = 0
+  clearInterval(relojPrioridad)
+  contenedorBotones.lastElementChild.classList.remove('armado')
+}
+
+function armarPrioridad() {
+  if (!selectMesa.value) {
+    anotar('No hay mesa elegida', false)
+    prenderLed('rojo')
+    return
+  }
+  prioridadHasta = Date.now() + VENTANA_PRIORIDAD_MS
+  contenedorBotones.lastElementChild.classList.add('armado')
+  prenderLed('azul')
+
+  // la pantallita cuenta para atras como lo haria el aparato
+  const mostrar = () => {
+    const quedan = Math.ceil((prioridadHasta - Date.now()) / 1000)
+    if (quedan <= 0) {
+      desarmarPrioridad()
+      mostrarMesa()
+      return
+    }
+    pantallita.textContent = 'PRIORIDAD ' + quedan + 's'
+  }
+  clearInterval(relojPrioridad)
+  mostrar()
+  relojPrioridad = setInterval(mostrar, 200)
+}
 
 function leerGuardado(clave, siNoHay) {
   try {
@@ -93,6 +136,8 @@ function mostrarMesa() {
 
 async function apretar(boton, elemento) {
   if (ocupado) return
+  if (boton.tipo === 'prioridad') return armarPrioridad()
+
   const idMesa = Number(selectMesa.value)
   if (!idMesa) {
     anotar('No hay mesa elegida', false)
@@ -100,27 +145,32 @@ async function apretar(boton, elemento) {
     return
   }
 
+  // la prioridad se gasta con este boton, salga bien o mal
+  const conPrioridad = prioridadArmada()
+  desarmarPrioridad()
+  const etiqueta = boton.texto + (conPrioridad ? ' (PRIORIDAD)' : '')
+
   ocupado = true
   elemento.classList.add('apretado')
   prenderLed('amarillo')
-  pantallita.textContent = 'Enviando ' + boton.texto + '...'
+  pantallita.textContent = 'Enviando ' + etiqueta + '...'
 
   try {
     const r = await fetch(api() + '/solicitudes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo: boton.tipo, id_mesa: idMesa }),
+      body: JSON.stringify({ tipo: boton.tipo, id_mesa: idMesa, prioridad: conPrioridad }),
     })
     const datos = await r.json().catch(() => ({}))
     if (!r.ok) throw new Error(datos.error || 'HTTP ' + r.status)
 
     prenderLed('verde')
-    pantallita.textContent = boton.texto + ' enviado'
-    anotar(boton.texto + ' → mesa id ' + idMesa + ' (solicitud ' + datos.id + ')', true)
+    pantallita.textContent = etiqueta + ' enviado'
+    anotar(etiqueta + ' → mesa id ' + idMesa + ' (solicitud ' + datos.id + ')', true)
   } catch (err) {
     prenderLed('rojo')
     pantallita.textContent = 'Error'
-    anotar(boton.texto + ' → mesa id ' + idMesa + ' fallo: ' + err.message, false)
+    anotar(etiqueta + ' → mesa id ' + idMesa + ' fallo: ' + err.message, false)
   }
 
   setTimeout(() => {

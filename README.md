@@ -26,5 +26,12 @@ npx serve .
 
 ## Botones
 
+Mozo, Cuenta, Pan, Menu, Cancelar y Prioridad. Prioridad no manda nada sola:
+si despues de apretarla se aprieta otro boton antes de 5 segundos, ese llamado
+sale con `"prioridad": true`.
+
+> Ojo: hoy el back (`createSolicitud`) ignora `prioridad`. Para que se guarde
+> hace falta una columna `prioridad` en la tabla `solicitud` y leerla en el INSERT.
+
 Estan en la lista `BOTONES` al principio de `simulador.js`. El `tipo` tiene que
 coincidir con `TEXTO_MOTIVO` del front (`Front-end/src/components/Llamados.tsx`).

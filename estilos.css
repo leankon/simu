@@ -6,6 +6,7 @@
   --verde: #22c55e;
   --rojo: #ef4444;
   --amarillo: #eab308;
+  --azul: #3b82f6;
 }
 
 * { box-sizing: border-box; }
@@ -82,6 +83,7 @@ h2 { font-size: 1.1rem; }
 }
 .led-verde { background: var(--verde); box-shadow: 0 0 10px var(--verde); }
 .led-rojo { background: var(--rojo); box-shadow: 0 0 10px var(--rojo); }
+.led-azul { background: var(--azul); box-shadow: 0 0 10px var(--azul); }
 .led-amarillo { background: var(--amarillo); box-shadow: 0 0 10px var(--amarillo); }
 
 .botones {
@@ -111,6 +113,11 @@ h2 { font-size: 1.1rem; }
 }
 
 .boton-aparato.apretado { opacity: 0.6; cursor: wait; }
+
+.boton-aparato.armado {
+  background: var(--azul);
+  box-shadow: 0 5px 0 #1e3a8a, 0 0 16px var(--azul);
+}
 
 .tecla {
   position: absolute;
