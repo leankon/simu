@@ -1,37 +1,84 @@
-# Simulador de hardware SOLI
+# Simulador de hardware SOLI (HC-12)
 
-Simula el aparato de 6 botones que va en cada mesa. Cada boton le avisa al
-back (`https://soli-olive.vercel.app`) igual que lo haria el hardware:
+```
+[aparato de la mesa]  --radio HC-12-->  [HC-12 receptor por USB]  -->  puente.js  --HTTP-->  back
+   6 botones                               en la compu del local                 POST /solicitudes
+```
+
+- `aparato.js` simula el aparato de una mesa: 6 botones y un HC-12 que transmite tramas por serie.
+- `puente.js` es el programa de la compu del local: lee las tramas del HC-12 receptor y las pasa
+  al back (`https://soli-olive.vercel.app`). Sirve igual con el simulador y con el hardware real.
+- `protocolo.js` define la trama. El firmware del Arduino tiene que mandar exactamente esto.
+
+## La trama
+
+Una linea de texto por cada boton, a 9600 baudios (lo que trae el HC-12 de fabrica):
+
+```
+<numeroMesa>,<tipo>,<prioridad>*<checksum>\n
+3,mozo,1*15
+```
+
+| campo      | valores                                         |
+|------------|-------------------------------------------------|
+| numeroMesa | el numero pegado en la mesa (no el id de la base) |
+| tipo       | `mozo`, `cuenta`, `pan`, `menu`, `cancelar`     |
+| prioridad  | `1` si antes se apreto Prioridad, `0` si no     |
+| checksum   | XOR de todos los bytes antes del `*`, en hexa con 2 digitos |
+
+El puente descarta las tramas con checksum mal (ruido de radio) y convierte el numero de mesa en el
+`id` de la base con `GET /mesas`. Despues manda:
 
 ```
 POST /solicitudes
-Content-Type: application/json
-
-{ "tipo": "mozo", "id_mesa": 3 }
+{ "tipo": "mozo", "id_mesa": 9, "prioridad": true }
 ```
 
-La solicitud queda `pendiente` y aparece en la Vista Mozo y en el Panel Encargado.
-
-## Como usarlo
-
-Abrir `index.html` en el navegador (no necesita instalar nada), o servirlo:
-
-```
-npx serve .
-```
-
-1. Elegir la mesa (se cargan de `GET /mesas`; se manda el `id`, no el numero).
-2. Apretar un boton (o las teclas 1 a 6).
-3. El led se pone verde si el back respondio bien y rojo si fallo.
+> Hoy el back ignora `prioridad` hasta que agreguen la columna.
 
 ## Botones
 
-Mozo, Cuenta, Pan, Menu, Cancelar y Prioridad. Prioridad no manda nada sola:
-si despues de apretarla se aprieta otro boton antes de 5 segundos, ese llamado
-sale con `"prioridad": true`.
+| tecla | boton     |
+|-------|-----------|
+| 1     | Mozo      |
+| 2     | Cuenta    |
+| 3     | Pan       |
+| 4     | Menu      |
+| 5     | Cancelar  |
+| 6     | Prioridad |
 
-> Ojo: hoy el back (`createSolicitud`) ignora `prioridad`. Para que se guarde
-> hace falta una columna `prioridad` en la tabla `solicitud` y leerla en el INSERT.
+Prioridad no transmite nada: si en los 5 segundos siguientes se aprieta otro boton, esa trama va con
+prioridad `1`. Ademas el aparato ignora apretes a menos de 1,5 s del anterior.
+En el simulador, `m` cambia de mesa y `q` sale.
 
-Estan en la lista `BOTONES` al principio de `simulador.js`. El `tipo` tiene que
-coincidir con `TEXTO_MOTIVO` del front (`Front-end/src/components/Llamados.tsx`).
+## Uso
+
+Necesita Node 18 o mas nuevo.
+
+**Sin hardware** (el pipe hace de radio):
+
+```
+node aparato.js --mesa 3 | node puente.js
+```
+
+**Con el HC-12 receptor real** enchufado por USB:
+
+```
+npm install
+node puente.js --puerto COM3            # Windows
+node puente.js --puerto /dev/ttyUSB0    # Linux
+```
+
+**Probar la radio sin el Arduino**: con un segundo HC-12 por USB, el simulador transmite por el aire:
+
+```
+node aparato.js --mesa 3 --puerto COM4
+```
+
+Para apuntar a un back local: `--api http://localhost:3000` en `puente.js`.
+
+## Tests
+
+```
+npm test
+```

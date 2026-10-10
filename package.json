@@ -1,0 +1,19 @@
+{
+  "name": "simu",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Simulador del hardware SOLI (botonera + HC-12) y puente serie -> API",
+  "type": "module",
+  "scripts": {
+    "aparato": "node aparato.js",
+    "puente": "node puente.js",
+    "simular": "node aparato.js --mesa 1 | node puente.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "serialport": "^12.0.0"
+  }
+}
